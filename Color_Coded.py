@@ -32,7 +32,6 @@ def get3x3(img_as_list, height, width, num):
 
 
 # Returns a list of k randomly picked elements from a list l
-# For rgb
 def random_picks(k, l):
     output = []
     already_picked = set()
@@ -47,6 +46,85 @@ def random_picks(k, l):
             i -= 1  # we try again
         i += 1
     return output
+
+
+# Returns dictionary of (pixel index:cluster center) pairs using Lloyd's k-means clustering algorithm
+# INPUTS: k is the number of clusters, data is a list of data RGB tuples
+def get_clusters(k, data):
+    # Pick random centers from the data list to start
+    centers = random_picks(k, data)
+
+    # RSS is the residual sum of squares (total error squared of each point's dist to its cluster center)
+    RSS = 0
+    centers_changed = True
+
+    while centers_changed:
+        # Create dictionary mapping data tuple locations to centers
+        dictionary = dict()
+        RSS = 0
+
+        # RGB distances are weighted evenly (using square norm for dist)
+        for i in range(len(data)):
+            # The index of the closest center to i
+            closest = 0
+            # Initialize distance between i and closest center
+            dist = float("inf")
+
+            # Iterate through centers
+            for c in range(0, k):
+                temp = 0
+                # Iterate through each R/G/B pixel value
+                for val in range(3):
+                    temp += (centers[c][val] - data[i][val]) ** 2
+                # If distance to center c is shorter
+                if temp < dist:
+                    dist = temp
+                    closest = c
+
+            dictionary.update({i: closest})
+
+        # Now adjust center locations
+        # cluster is a list of [count, avg] lists corresponding to the center at its index
+        cluster = []
+        # Initialize cluster structure
+        for i in range(k):
+            cluster.append([0, [0, 0, 0]])
+        # Sum up which color triplets belong to which cluster
+        for i in range(len(data)):
+            centers_index = dictionary.get(i)
+            cluster[centers_index][0] += 1
+
+            for rgb in range(3):
+                cluster[centers_index][1][rgb] += data[i][rgb]
+
+                # Update RSS
+                RSS += (centers[centers_index][rgb] - data[i][rgb]) ** 2
+        # Average out the [~, avg] part of each pair in cluster
+        for i in range(k):
+            for rgb in range(3):
+                cluster[i][1][rgb] = int(cluster[i][1][rgb] / cluster[i][0])
+
+        # Updates centers
+        centers_changed = False
+        for i in range(k):
+            if centers[i] != cluster[i][1]:
+                centers[i] = cluster[i][1]
+                centers_changed = True
+
+        # Early termination condition (close enough to solution according to prev testing)
+        if RSS < 940000000:
+            centers_changed = False
+        #! print(f'centers: {centers}') #!!!!!
+        #! print(f'RSS: {RSS}') #!!!!!
+
+    # Replace centers indicies in dictionary with finalized colors
+    # rep_colors is the dictionary of (pixel index : representative) colors for the training image
+    rep_colors = dict()
+    for key in dictionary:
+        new_val = centers[dictionary.get(key)]
+        rep_colors.update({key: new_val})
+
+    return rep_colors
 
 
 # find the most similar patches to represent the gray scale
@@ -139,44 +217,6 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
     return new_image
 
 
-# Returns list of cluster centers using Lloyd's k-means clustering algorithm
-# INPUTS: k is the number of clusters, data is a list of data RGB tuples
-def get_clusters(k, data):
-    # Pick random centers from the data list to start
-    centers = random_picks(k, data)
-
-    # Create dictionary mapping data tuple locations to centers
-    dictionary = dict()
-
-    # RGB distances are weighted evenly (using square norm for dist)
-    for pixel in data:
-        # The index of the closest center to i
-        closest = 0
-        # Get distance between i and first center
-        dist = float("inf")
-
-        # Iterate through centers
-        for rep_color in range(0, k):
-            temp = 0
-            # Iterate through each R/G/B value of i
-            for val in range(3):
-                temp += (centers[rep_color][val] - pixel[val]) ** 2
-            temp = math.sqrt(temp)
-            # If distance to center c is shorter
-            if temp < dist:
-                dist = temp
-                closest = rep_color
-
-        dictionary.update({pixel: closest})
-
-    # Now adjust center locations
-    #! For each center c, add up all i's that fall under c
-    #! Then average that summation and make that the new c
-    #! NEED TO ADD LOOP TO BE ABLE TO ITERATIVELY CONVERGE TO SOLUTION
-
-    return centers
-
-
 def main():
     try:
         # * Relative Path for Tandrew
@@ -190,13 +230,9 @@ def main():
         width, height = img.size
 
         # Create left (training) and right (testing) image halves
-        # training = original.crop((1, 1, (width / 2) + 1, height + 1))
-        # testing = img.crop(((width / 2), 1, width, height + 1))  #!plus 1 to get them to equal size
-        # training_grayscale = img.crop((1, 1, (width / 2) + 1, height + 1))
-
-        training = original.crop((0, 0, 100, 100))  #!delete
-        testing = img.crop((width / 2, 0, (width / 2) + 100, 100))  #!delete
-        training_grayscale = img.crop((0, 0, 100, 100))  #!delete
+        training = original.crop((1, 1, (width / 2) + 1, height + 1))
+        testing = img.crop(((width / 2), 1, width, height + 1))  #!plus 1 to get them to equal size
+        training_grayscale = img.crop((1, 1, (width / 2) + 1, height + 1))
 
         # need sizes of all halves
         half_width, half_height = training.size
@@ -206,33 +242,33 @@ def main():
         training_as_list = list(training.getdata())
         training_grayscale_as_list = list(training_grayscale.getdata())
 
-        #! temp for tandrew testing
+        # benton commented for testing
         # get_clusters(5, training_as_list)
-
+        #! temp for tandrew testing
         # andrews test for his shit
-        mapping = {}
-        for x, pixel in enumerate(training_as_list):
-            if x % 5 == 0:
-                mapping.update({pixel: (255, 0, 0)})
-            elif x % 4 == 0:
-                mapping.update({pixel: (255, 255, 0)})
-            elif x % 3 == 0:
-                mapping.update({pixel: (0, 255, 0)})
-            elif x % 2 == 0:
-                mapping.update({pixel: (0, 255, 255)})
-            else:
-                mapping.update({pixel: (0, 0, 255)})
+        # mapping = {}
+        # for x, pixel in enumerate(training_as_list):
+        #     if x % 5 == 0:
+        #         mapping.update({pixel: (255, 0, 0)})
+        #     elif x % 4 == 0:
+        #         mapping.update({pixel: (255, 255, 0)})
+        #     elif x % 3 == 0:
+        #         mapping.update({pixel: (0, 255, 0)})
+        #     elif x % 2 == 0:
+        #         mapping.update({pixel: (0, 255, 255)})
+        #     else:
+        #         mapping.update({pixel: (0, 0, 255)})
 
-        output = color_mapping(
-            6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, mapping
-        )
+        # output = color_mapping(
+        #     6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, mapping
+        # )
 
-        thing = Image.new("RGB", testing.size)
-        thing.putdata(output)
+        # thing = Image.new("RGB", testing.size)
+        # thing.putdata(output)
 
-        thing.show()
-        training.show()
-        testing.show()
+        # thing.show()
+        # training.show()
+        # testing.show()
         #! end of tandrew test
         return
 
