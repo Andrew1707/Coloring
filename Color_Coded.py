@@ -51,50 +51,89 @@ def random_picks(k, l):
     return output
 
 
-# Returns list of cluster centers using Lloyd's k-means clustering algorithm
+# Returns dictionary of (pixel index:cluster center) pairs using Lloyd's k-means clustering algorithm
 # INPUTS: k is the number of clusters, data is a list of data RGB tuples
 def get_clusters(k, data):
     # Pick random centers from the data list to start 
     centers = random_picks(k, data)
 
-    # Create dictionary mapping data tuple locations to centers 
-    dictionary = dict()
-
-    # RGB distances are weighted evenly (using square norm for dist)
-    for i in data:
-        # The index of the closest center to i
-        closest = 0
-        # Get distance between i and first center
-        dist = float('inf') #!CHECK THIS
-
-        # Iterate through centers
-        for c in range(0, k):
-            temp = 0
-            # Iterate through each R/G/B value of i
-            for val in range(3):
-                temp += (centers[c][val] - i[val]) ** 2
-            
-            # If distance to center c is shorter
-            if temp < dist:
-                dist = temp
-                closest = c
-
-        dictionary.update({i:closest})
+    # RSS is the residual sum of squares (total error squared of each point's dist to its cluster center)
+    RSS = 0
+    centers_changed = True
     
-    # Now adjust center locations
-    #! For each center c, add up all i's that fall under c
-    #! Then average that summation and make that the new c
-    #! NEED TO ADD LOOP TO BE ABLE TO ITERATIVELY CONVERGE TO SOLUTION
+    while centers_changed:
+        # Create dictionary mapping data tuple locations to centers 
+        dictionary = dict()
+        RSS = 0
 
-    return centers
+        # RGB distances are weighted evenly (using square norm for dist)
+        for i in range(len(data)):
+            # The index of the closest center to i
+            closest = 0
+            # Initialize distance between i and closest center
+            dist = float('inf')
+
+            # Iterate through centers
+            for c in range(0, k):
+                temp = 0
+                # Iterate through each R/G/B pixel value
+                for val in range(3):
+                    temp += (centers[c][val] - data[i][val]) ** 2
+                # If distance to center c is shorter
+                if temp < dist:
+                    dist = temp
+                    closest = c
+
+            dictionary.update({i:closest})
+
+        # Now adjust center locations
+        # cluster is a list of [count, avg] lists corresponding to the center at its index
+        cluster = []
+        # Initialize cluster structure
+        for i in range(k):
+            cluster.append([0,[0,0,0]])
+        # Sum up which color triplets belong to which cluster
+        for i in range(len(data)):
+            centers_index = dictionary.get(i)
+            cluster[centers_index][0] += 1
+
+            for rgb in range(3):
+                cluster[centers_index][1][rgb] += data[i][rgb]
+            
+                # Update RSS
+                RSS += (centers[centers_index][rgb] - data[i][rgb]) ** 2
+        # Average out the [~, avg] part of each pair in cluster
+        for i in range(k):
+            for rgb in range(3):
+                cluster[i][1][rgb] = int(cluster[i][1][rgb] / cluster[i][0])
+        
+        # Updates centers
+        centers_changed = False
+        for i in range(k):
+            if centers[i] != cluster[i][1]:
+                centers[i] = cluster[i][1]
+                centers_changed = True
+        
+        # Early termination condition (close enough to solution according to prev testing)
+        if RSS < 940000000:
+            centers_changed = False
+        #! print(f'centers: {centers}') #!!!!!
+        #! print(f'RSS: {RSS}') #!!!!!
+
+    # Replace centers indicies in dictionary with finalized colors
+    # rep_colors is the dictionary of (pixel index : representative) colors for the training image
+    rep_colors = dict()
+    for key in dictionary:
+        new_val = centers[dictionary.get(key)]
+        rep_colors.update({key:new_val})
+
+    return rep_colors
 
 
 def main():
     try:
-        #* Relative Path for Tandrew
-        # original = Image.open("C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png")
-        #* Relative Path for Benton
-        original = Image.open("rotated_picture.jpg") # benton @Tandrew this line should work for u too, it's in the git repo
+        # Relative Path
+        original = Image.open("C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png")
         
         img = original.convert("L")  # grayscale copy
         width, height = img.size
@@ -107,7 +146,8 @@ def main():
         img_as_list = list(img.getdata())
         original_as_list = list(original.getdata())
 
-        get_clusters(5, original_as_list)
+        #! test_list = [(0,0,0), (1,2,4), (4,0,0), (5,0,0), (10,2,5), (3,6,9), (1,3,7)]
+        rep_colors = get_clusters(5, original_as_list)
         return
 
         # get the 3x3 pixel and show it
