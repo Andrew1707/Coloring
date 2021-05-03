@@ -127,9 +127,12 @@ def get_clusters(k, data):
     return rep_colors
 
 
+# num patches is how many best patches do you want to save for determination of rep color
 # find the most similar patches to represent the gray scale
 # training and testing are list of data
 # height and width are size of image
+# rep colors is each pixels rep color from k clustering
+# returns data of colored testing image
 def color_mapping(num_patches, training, training_gray, testing, height, width, rep_colors):
 
     training_gray_patches = []
@@ -142,7 +145,9 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
     new_image = []
     # compare the testing patch to training patch and keep best numpatches representatives
     for x in range(len(testing)):
-        print(x / len(testing))
+        # time stamp for every 5 percent
+        if (x / len(testing)) % 0.05 < 0.0001:
+            print(x / len(testing))
         testing_patch = get3x3(testing, height, width, x)
         best = []
 
@@ -193,7 +198,7 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
             # get count of all the rep colors
             for b in best:
                 # b[0] is the index needed to get color from training_as_data which has a rep color
-                cluster_color = rep_colors[training[b[0]]]
+                cluster_color = rep_colors[b[0]]
                 if cluster_color not in best_rep:
                     best_rep.update({cluster_color: 1})
                 else:
@@ -212,7 +217,7 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
             else:
                 # best [0] is tuple with (index, distance) where since sorted should be the shortest distance
                 # best[0][0] is said index so we get the training color and then its rep color
-                new_image.append(rep_colors[training[best[0][0]]])
+                new_image.append(rep_colors[best[0][0]])
 
     return new_image
 
@@ -222,9 +227,10 @@ def main():
         # * Relative Path for Tandrew
         # original = Image.open("C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png")
         # * Relative Path for Benton
-        original = Image.open(
-            "C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png"
-        )
+        # original = Image.open(
+        #     "C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png"
+        # )
+        original = Image.open("C:Images\EvenSmaller.png")
 
         img = original.convert("L")  # grayscale copy
         width, height = img.size
@@ -242,8 +248,11 @@ def main():
         training_as_list = list(training.getdata())
         training_grayscale_as_list = list(training_grayscale.getdata())
 
-        # benton commented for testing
-        # get_clusters(5, training_as_list)
+        clusters = get_clusters(5, training_as_list)
+        tuple_clusters = {}
+        for x, c in enumerate(clusters):
+            RGB = (clusters[c][0], clusters[c][1], clusters[c][2])
+            tuple_clusters.update({x: RGB})
         #! temp for tandrew testing
         # andrews test for his shit
         # mapping = {}
@@ -259,16 +268,16 @@ def main():
         #     else:
         #         mapping.update({pixel: (0, 0, 255)})
 
-        # output = color_mapping(
-        #     6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, mapping
-        # )
+        output = color_mapping(
+            6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, tuple_clusters
+        )
 
-        # thing = Image.new("RGB", testing.size)
-        # thing.putdata(output)
+        thing = Image.new("RGB", testing.size)
+        thing.putdata(output)
 
-        # thing.show()
-        # training.show()
-        # testing.show()
+        thing.show()
+        training.show()
+        testing.show()
         #! end of tandrew test
         return
 
