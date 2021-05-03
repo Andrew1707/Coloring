@@ -55,12 +55,13 @@ def get_clusters(k, data):
     centers = random_picks(k, data)
 
     # RSS is the residual sum of squares (total error squared of each point's dist to its cluster center)
-    RSS = 0
+    old_RSS, RSS = 0, 0
     centers_changed = True
 
     while centers_changed:
         # Create dictionary mapping data tuple locations to centers
         dictionary = dict()
+        old_RSS = RSS
         RSS = 0
 
         # RGB distances are weighted evenly (using square norm for dist)
@@ -112,10 +113,8 @@ def get_clusters(k, data):
                 centers_changed = True
 
         # Early termination condition (close enough to solution according to prev testing)
-        if RSS < 940000000:
+        if abs(old_RSS - RSS) < (old_RSS * 0.0001):
             centers_changed = False
-        #! print(f'centers: {centers}') #!!!!!
-        #! print(f'RSS: {RSS}') #!!!!!
 
     # Replace centers indicies in dictionary with finalized colors
     # rep_colors is the dictionary of (pixel index : representative) colors for the training image
@@ -224,12 +223,6 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
 
 def main():
     try:
-        # * Relative Path for Tandrew
-        # original = Image.open("C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png")
-        # * Relative Path for Benton
-        # original = Image.open(
-        #     "C:Images\Cartoon-Zoom-Backgrounds-Funny-SpongeBob-Images-to-Download-For-Free-1200x720.png"
-        # )
         original = Image.open("C:Images\EvenSmaller.png")
 
         img = original.convert("L")  # grayscale copy
