@@ -103,7 +103,8 @@ def get_clusters(k, data):
         # Average out the [~, avg] part of each pair in cluster
         for i in range(k):
             for rgb in range(3):
-                cluster[i][1][rgb] = int(cluster[i][1][rgb] / cluster[i][0])
+                if cluster[i][0] != 0:
+                    cluster[i][1][rgb] = int(cluster[i][1][rgb] / cluster[i][0])
 
         # Updates centers
         centers_changed = False
@@ -223,7 +224,8 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
 
 def main():
     try:
-        original = Image.open("C:Images\EvenSmaller.png")
+        #* original = Image.open("C:Images\EvenSmaller.png")
+        original = Image.open("C:Images\\nature.jpeg")
 
         img = original.convert("L")  # grayscale copy
         width, height = img.size
