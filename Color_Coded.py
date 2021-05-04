@@ -31,6 +31,15 @@ def get3x3(img_as_list, height, width, num):
     return new_list
 
 
+# RGB list to GrayScale list converter (grayscale in 0-1 format not 0-255)
+def dulldown(RGB):
+    grayscale = []
+    for x in RGB:
+        gray = 0.21 * x[0] + 0.72 * x[1] + 0.07 * x[2]
+        grayscale.append(gray / 255)
+    return grayscale
+
+
 # Returns a list of k randomly picked elements from a list l
 def random_picks(k, l):
     output = []
@@ -157,11 +166,12 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
         for p in range(num_patches):
             best.append((None, float("inf")))
 
-        # if the patch is on the boarder
+        # if the patch is on the boarder make it black or color it
         if testing_patch == None:
             # if its on the border make it black
             new_image.append((0, 0, 0))
         else:
+            # comparing with every training gray scale patch
             for n, training_patch in enumerate(training_gray_patches):
 
                 if training_patch != None:
@@ -185,7 +195,7 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
 
                     #!     used.append(min_diff[0])
                     #!     total_difference += min_diff[1]
-                    #! see if total difference of patch is less worst in best
+                    # see if total difference of patch is less worst in best
                     if total_difference < best[num_patches - 1][1]:
                         best.pop()
                         best.append((n, total_difference))
@@ -224,8 +234,8 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
 
 def main():
     try:
-        #* original = Image.open("C:Images\EvenSmaller.png")
-        original = Image.open("C:Images\\nature.jpeg")
+        # * original = Image.open("C:Images\EvenSmaller.png")
+        original = Image.open("C:Images\EvenSmaller.png")
 
         img = original.convert("L")  # grayscale copy
         width, height = img.size
@@ -245,24 +255,17 @@ def main():
 
         clusters = get_clusters(5, training_as_list)
         tuple_clusters = {}
+        clusters_img = []
+        cluster_colors = set()
         for x, c in enumerate(clusters):
             RGB = (clusters[c][0], clusters[c][1], clusters[c][2])
             tuple_clusters.update({x: RGB})
-        #! temp for tandrew testing
-        # andrews test for his shit
-        # mapping = {}
-        # for x, pixel in enumerate(training_as_list):
-        #     if x % 5 == 0:
-        #         mapping.update({pixel: (255, 0, 0)})
-        #     elif x % 4 == 0:
-        #         mapping.update({pixel: (255, 255, 0)})
-        #     elif x % 3 == 0:
-        #         mapping.update({pixel: (0, 255, 0)})
-        #     elif x % 2 == 0:
-        #         mapping.update({pixel: (0, 255, 255)})
-        #     else:
-        #         mapping.update({pixel: (0, 0, 255)})
-
+            clusters_img.append(RGB)
+            cluster_colors.add(RGB)
+        clusters_image = Image.new("RGB", training.size)
+        clusters_image.putdata(clusters_img)
+        clusters_image.show()
+        print(cluster_colors)
         output = color_mapping(
             6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, tuple_clusters
         )
