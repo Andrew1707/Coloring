@@ -232,7 +232,7 @@ def color_mapping(num_patches, training, training_gray, testing, height, width, 
     return new_image
 
 
-def main():
+def play():
     try:
         # * original = Image.open("C:Images\EvenSmaller.png")
         original = Image.open("C:Images\EvenSmaller.png")
@@ -253,7 +253,13 @@ def main():
         training_as_list = list(training.getdata())
         training_grayscale_as_list = list(training_grayscale.getdata())
 
-        clusters = get_clusters(5, training_as_list)
+        numDiffPixels = set()
+        for x in training_as_list:
+            numDiffPixels.add(x)
+        num = int(math.sqrt(math.sqrt(len(numDiffPixels))))
+        print(num)
+
+        clusters = get_clusters(num, training_as_list)
         tuple_clusters = {}
         clusters_img = []
         cluster_colors = set()
@@ -266,6 +272,8 @@ def main():
         clusters_image.putdata(clusters_img)
         clusters_image.show()
         print(cluster_colors)
+        return  #!
+
         output = color_mapping(
             6, training_as_list, training_grayscale_as_list, testing_as_list, half_height, half_width, tuple_clusters
         )
@@ -303,4 +311,4 @@ def main():
         pass
 
 
-main()
+# main()

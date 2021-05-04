@@ -5,6 +5,7 @@ from PIL import Image
 import math
 import random
 import Color_Coded as cc
+import matplotlib.pyplot as plt
 
 ### Model Idea: For every 3x3 greyscale patch, multiply
 ### each pixel val by a weight vector to obtain prediction
@@ -87,14 +88,14 @@ def recolor(k, data):
         new_val = np.array(centers[dictionary.get(key)])
         rep_colors[key] = new_val
 
-    return rep_colors
+    return rep_colors, RSS
 
 
 def initialize_weights(k):
-    weights = np.empty((9,k))
+    weights = np.empty((9, k))
     for i in range(9):
         for j in range(k):
-            weights[i][j] = random.uniform(-1,1)
+            weights[i][j] = random.uniform(-1, 1)
 
     return weights
 
@@ -116,10 +117,11 @@ def trainer(weights, patch):
     return
 
 
-def main():
+def start():
     # Relative path
     original = Image.open("C:Nature\small_nature.jpeg")
-    k = 5 #! Might not need
+    # original = Image.open("C:Images\EvenSmaller.png")
+    k = 5  #! Might not need
 
     img = original.convert("L")  # grayscale copy
     width, height = img.size
@@ -138,7 +140,19 @@ def main():
     training_grayscale_as_list = np.array(list(training_grayscale.getdata()))
 
     # Run get clusters, get np array of RGB vals that replace the original RGBs in training_as_list
-    training_recolored = recolor(k, training_as_list)
+    RSS_list = []
+    num_list = []
+    for num in range(1, 20):
+        print(num)
+        training_recolored, RSS = recolor(num, training_as_list)
+        RSS_list.append(RSS)
+        num_list.append(num)
+    plt.xlabel("k clusters")
+    plt.ylabel("RSS")
+    plt.plot(num_list, RSS_list, color="red", label="Smart")
+    plt.legend(loc="best")
+    plt.show()
+    return
 
     # Append training arrays so cols 1-3 are recolored RGB, col 4 is corresponding grey val
     training_grayscale_as_list = np.reshape(training_grayscale_as_list, (training_grayscale_as_list.size, 1))
@@ -146,12 +160,13 @@ def main():
 
     # Shuffle combined_ds, then split into train_ds and val_ds
     np.random.shuffle(combined_ds)
-    train_ds = combined_ds[:,-1]
+    train_ds = combined_ds[:, -1]
     val_ds = combined_ds[:, :-1]
 
     # Initalize weights
-    weights = initialize_weights(k) #! Might not need k, so reupdate
+    weights = initialize_weights(k)  #! Might not need k, so reupdate
 
     return
 
-main()
+
+start()
