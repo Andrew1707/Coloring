@@ -158,13 +158,10 @@ def train(weights, train_ds, val_ds, patch_ds, height, width, centers):
             lr = 1e3
 
         # Update weights
-        # loss_val = loss(predictions, one_index) #!!!!
-        # print(f'i: {i}, loss_val: {loss_val}')#! Could keep for plotting
+        # loss_val = loss(predictions, one_index)
+        # print(f'i: {i}, loss_val: {loss_val}') #! For plotting
         soft_gradient = softmax_loss_grad(predictions, one_hot_encoded_arr)
         weights = update_weights(lr, weights, train_patch, soft_gradient)
-
-        if (i % 1000) == 0: #!!!!!!!
-            print(f'Train i: {i}')# , Loss = {loss_val}') #!!!!!!!
     
     return weights
 
@@ -172,7 +169,7 @@ def train(weights, train_ds, val_ds, patch_ds, height, width, centers):
 def start():
     # Relative path
     original = Image.open("C:Nature\\small_nature.jpeg")
-    # original = Image.open("C:Images\EvenSmaller.png")
+    # original = Image.open("C:Images\\EvenSmaller.png")
     k = 10  # Adjusted number of clusters
 
     img = original.convert("L")  # grayscale copy
@@ -214,8 +211,8 @@ def start():
 
     # Append training arrays so cols 1-3 are recolored RGB
     # col 4 is corresponding grey val
-    # could make a col 5 w/ added 3rd dimension for entire arr, 9 deep (for patches)
-    # skim the top surface (3rd dim 0th index) for cols 1-4, grab col 5 and reshape
+    # col 5 w/ added 3rd dimension for entire arr, 9 deep (for patches)
+    # skim the top surface (3rd dim 0th index) for cols 1-4, grab col 5 w/ 3rd dim
     combined_obj = np.zeros((training_grayscale_as_list.size, 5, 9))
     combined_obj[:, :3, 0] = training_recolored
     combined_obj[:, 3, 0] = training_grayscale_as_list
@@ -233,9 +230,6 @@ def start():
             i -= 1
             stop_index -= 1
         i += 1
-
-    print(training_recolored.shape, training_grayscale_as_list.shape)#!!!!
-    print(f'combined shape: {combined_obj.shape}')#!!!
     
     # Rescale vals from [0, 255] to [0, 1], shuffle combined_ds, then split
     combined_obj = combined_obj / 255
@@ -246,45 +240,29 @@ def start():
     val_ds = combined_obj[:, :3, 0]
     patch_ds = combined_obj[:, 4, :]
 
-
     # Initalize weights
     weights = initialize_weights(k)
-
-    print(train_ds.shape, val_ds.shape, patch_ds.shape, weights.shape, centers.shape) #!!!!
-    print(f'centers: {centers}')#!!!!
-
     weights = train(weights, train_ds, val_ds, patch_ds, half_width, half_height, centers)
-
-    #! TRACKER #!!!!!
-    color_dist = np.zeros(10)#!!!
 
     # Apply to test image
     test_rgb = np.zeros((testing_as_list.size,3))
     for i in range(len(testing_as_list)):
-        if (i % 1000) == 0: #!!!!!!!
-            print(f'Final Test i: {i}') #!!!!!!!
         temp_patch = np.array(cc.get3x3(testing_as_list, half_height, half_width, i))
-        
         if temp_patch.size == 1:
             continue
-        
         temp_patch = temp_patch / 255
 
         temp_pred = improvedModel(weights, temp_patch)
         new_color = centers[np.argmax(temp_pred)]
-        color_dist[np.argmax(temp_pred)] += 1 #!!!
         test_rgb[i] = new_color
 
     # Rescale new RGB image back up to [0, 255] and display
     test_rgb = test_rgb * 255
     test_rgb = np.reshape(test_rgb, (half_height, half_width, 3))
 
-    print(f'color_dist: {color_dist}') #!!!
-
     new_img = Image.fromarray(np.uint8(test_rgb), mode='RGB')
     new_img.show()
     
-    new_img.save("C:Nature\\new_img.jpg")
     return
 
 

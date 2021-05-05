@@ -18,9 +18,6 @@ def loss_calc(img1, img2):
 
 def main():
     with Image.open("C:Nature\\right_basic.png") as basic, Image.open("C:Nature\\right_original.png") as original:
-        b_width, b_height = basic.size
-        o_width, o_height = original.size
-
         basic_rgb = basic.convert(mode="RGB")
         original_rgb = original.convert(mode="RGB")
 
@@ -42,9 +39,6 @@ def main():
 
 
     with Image.open("C:Nature\\right_adv.png") as adv, Image.open("C:Nature\\right_original.png") as original:
-        a_width, a_height = adv.size
-        o_width, o_height = original.size
-
         adv_rgb = adv.convert(mode="RGB")
         original_rgb = original.convert(mode="RGB")
 
